@@ -63,6 +63,16 @@ TEST_F(TestCoroIoScheduler, Concurrent)
 {
     auto scheduler = coroutines::IoScheduler::get_instance();
 
+    auto per_task_overhead = [&] {
+        static constexpr std::chrono::milliseconds SmallestDelay{1};
+        auto start = coroutines::clock_t::now();
+        coroutines::sync_wait([scheduler]() -> coroutines::Task<> {
+            co_await scheduler->yield_for(SmallestDelay);
+        }());
+        auto stop = coroutines::clock_t::now();
+        return (stop - start) - SmallestDelay;
+    }();
+
     auto task = [scheduler]() -> coroutines::Task<> {
         co_await scheduler->yield_for(10ms);
     };
@@ -71,12 +81,14 @@ TEST_F(TestCoroIoScheduler, Concurrent)
 
     std::vector<coroutines::Task<>> tasks;
 
-    for (uint32_t i = 0; i < 1000; i++)
+    const uint32_t NumTasks{1'000};
+    for (uint32_t i = 0; i < NumTasks; i++)
     {
         tasks.push_back(task());
     }
 
     coroutines::sync_wait(coroutines::when_all(std::move(tasks)));
+    auto stop = coroutines::clock_t::now();
 
-    ASSERT_LT(coroutines::clock_t::now() - start, 20ms);
+    ASSERT_LT(stop - start, per_task_overhead * NumTasks);
 }
