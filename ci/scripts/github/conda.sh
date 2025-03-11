@@ -39,8 +39,8 @@ fi
 # Print the info just to be sure base is active
 conda info
 
-rapids-logger "Git LFS"
-conda install -c conda-forge git-lfs
+rapids-logger "Git LFS and boa"
+conda install -c conda-forge git-lfs boa
 git lfs install
 
 rapids-logger "Building Conda Package"
